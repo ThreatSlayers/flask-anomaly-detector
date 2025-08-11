@@ -1,28 +1,30 @@
 from flask import Flask, request, jsonify
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing.sequence import pad_sequences
-from tensorflow import not_equal
 import tensorflow as tf
 import numpy as np
 import os
 
 app = Flask(__name__)
 
-# Load model with custom objects
+# Wrap tf.not_equal into something load_model can register
+def NotEqual(x, y):
+    return tf.not_equal(x, y)
+
 try:
     from keras.utils import custom_object_scope
 except ImportError:
     from tensorflow.keras.utils import custom_object_scope
 
+# Load model with custom op registered
 try:
-    with custom_object_scope({'NotEqual': not_equal}):
+    with custom_object_scope({'NotEqual': NotEqual}):
         model = load_model("lstm_autoencoder.h5")
     print("✅ Model loaded successfully")
 except Exception as e:
     print(f"❌ Failed to load model: {e}")
     model = None
 
-# Set your anomaly threshold
 THRESHOLD = 0.015
 
 @app.route('/')
@@ -39,14 +41,12 @@ def predict():
 
     try:
         data = request.json.get("sequence")
-
         if not data:
             return jsonify({"error": "Missing 'sequence' in request"}), 400
 
         padded = pad_sequences([data], padding='post')
         prediction = model.predict(padded)
 
-        # Calculate reconstruction error
         X_flat = np.array(data).reshape(1, -1)
         X_pred_flat = prediction.reshape(1, -1)
         error = np.mean(np.square(X_flat - X_pred_flat))
