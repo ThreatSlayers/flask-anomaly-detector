@@ -7,7 +7,7 @@ import os
 
 app = Flask(__name__)
 
-# Wrap tf.not_equal into something load_model can register
+# Wrap tf.not_equal so Keras can register it
 def NotEqual(x, y):
     return tf.not_equal(x, y)
 
@@ -16,7 +16,7 @@ try:
 except ImportError:
     from tensorflow.keras.utils import custom_object_scope
 
-# Load model with custom op registered
+# Load model with custom op
 try:
     with custom_object_scope({'NotEqual': NotEqual}):
         model = load_model("lstm_autoencoder.h5")
@@ -61,5 +61,5 @@ def predict():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))
+    port = int(os.environ.get("PORT", 5000))  # Render assigns a dynamic port
     app.run(host="0.0.0.0", port=port, debug=False)
