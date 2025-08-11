@@ -6,12 +6,13 @@ import numpy as np
 
 app = Flask(__name__)
 
-# Try to register custom objects (so Render can load the model without error)
-custom_objects = {}
-try:
-    custom_objects["NotEqual"] = tf.not_equal
-except AttributeError:
-    print("⚠ Warning: 'NotEqual' not found in TensorFlow. Proceeding without it.")
+# Add all your custom objects here:
+custom_objects = {
+    "NotEqual": tf.not_equal,
+    # Example: Add your custom layers or functions if any, e.g.
+    # "MyCustomLayer": MyCustomLayerClass,
+    # "custom_activation": custom_activation_function,
+}
 
 # Load the trained LSTM Autoencoder model
 try:
@@ -42,8 +43,9 @@ def predict():
         if not data:
             return jsonify({"error": "Missing 'sequence' in request"}), 400
 
-        # Convert input to padded array
+        # Pad sequence if needed (adjust maxlen if you know your model input length)
         padded = pad_sequences([data], padding='post')
+
         prediction = model.predict(padded)
 
         # Calculate reconstruction error
@@ -64,5 +66,3 @@ if __name__ == '__main__':
     import os
     port = int(os.environ.get("PORT", 5000))  # Render sets PORT dynamically
     app.run(host="0.0.0.0", port=port, debug=False)
-
-
