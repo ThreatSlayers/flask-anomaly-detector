@@ -1,22 +1,41 @@
 from flask import Flask, request, jsonify
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing.sequence import pad_sequences
+import tensorflow as tf
 import numpy as np
 
 app = Flask(__name__)
 
+# Try to register custom objects (so Render can load the model without error)
+custom_objects = {}
+try:
+    custom_objects["NotEqual"] = tf.not_equal
+except AttributeError:
+    print("⚠ Warning: 'NotEqual' not found in TensorFlow. Proceeding without it.")
+
 # Load the trained LSTM Autoencoder model
-model = load_model("lstm_autoencoder.h5")
+try:
+    model = load_model("lstm_autoencoder.h5", custom_objects=custom_objects)
+    print("✅ Model loaded successfully")
+except Exception as e:
+    print(f"❌ Failed to load model: {e}")
+    model = None
 
 # Set your anomaly threshold (match your training)
 THRESHOLD = 0.015
 
 @app.route('/')
 def home():
-    return "✅ LSTM Autoencoder API is running!"
+    if model:
+        return "✅ LSTM Autoencoder API is running!"
+    else:
+        return "❌ Model failed to load. Check server logs."
 
 @app.route('/predict', methods=['POST'])
 def predict():
+    if model is None:
+        return jsonify({"error": "Model not loaded on server"}), 500
+
     try:
         data = request.json.get("sequence")
         
