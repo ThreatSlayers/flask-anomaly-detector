@@ -1,20 +1,30 @@
 from flask import Flask, request, jsonify
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing.sequence import pad_sequences
+import tensorflow as tf
 import numpy as np
 import os
 
 app = Flask(__name__)
 
-# Load the trained LSTM Autoencoder model
+# Wrap tf.not_equal so Keras can register it
+def NotEqual(x, y):
+    return tf.not_equal(x, y)
+
 try:
-    model = load_model("lstm_autoencoder.h5")
+    from keras.utils import custom_object_scope
+except ImportError:
+    from tensorflow.keras.utils import custom_object_scope
+
+# Load model with custom op
+try:
+    with custom_object_scope({'NotEqual': NotEqual}):
+        model = load_model("lstm_autoencoder.h5")
     print("✅ Model loaded successfully")
 except Exception as e:
     print(f"❌ Failed to load model: {e}")
     model = None
 
-# Set your anomaly detection threshold (match training)
 THRESHOLD = 0.015
 
 @app.route('/')
@@ -31,17 +41,14 @@ def predict():
 
     try:
         data = request.json.get("sequence")
-
         if not data:
             return jsonify({"error": "Missing 'sequence' in request"}), 400
 
-        # Pad sequence to match model's input length
         padded = pad_sequences([data], padding='post')
 
         # Model prediction
         prediction = model.predict(padded)
 
-        # Calculate reconstruction error
         X_flat = np.array(data).reshape(1, -1)
         X_pred_flat = prediction.reshape(1, -1)
         error = np.mean(np.square(X_flat - X_pred_flat))
@@ -58,7 +65,5 @@ def predict():
 
 
 if __name__ == '__main__':
-    # Use PORT from Render's environment or default to 5000
-    port = int(os.environ.get("PORT", 5000))
-    print(f"🚀 Starting server on port {port}...")
+    port = int(os.environ.get("PORT", 5000))  # Render assigns a dynamic port
     app.run(host="0.0.0.0", port=port, debug=False)
