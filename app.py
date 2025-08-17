@@ -9,11 +9,11 @@ app = Flask(__name__)
 
 # --- Model Loading ---
 try:
-    model = load_model("lstm_autoencoder.keras", compile=False)
-    print("✅ Model loaded successfully from lstm_autoencoder.keras")
+    model = load_model("threatslayers_lstm_autoencoder.keras", compile=False)
+    print("✅ Model loaded successfully from threatslayers_lstm_autoencoder.keras")
 except Exception as e:
     print(f"❌ Failed to load model: {e}")
-    print("Ensure 'lstm_autoencoder.keras' is in the same directory as app.py")
+    print("Ensure 'threatslayers_lstm_autoencoder.keras' is in the same directory as app.py")
     model = None
 
 THRESHOLD = 0.015
@@ -272,3 +272,4 @@ def predict():
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=False)
+
